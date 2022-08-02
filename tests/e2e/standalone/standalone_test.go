@@ -1,6 +1,3 @@
-//go:build e2e
-// +build e2e
-
 /*
 Copyright 2021 The Dapr Authors
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -158,7 +155,7 @@ func TestNegativeScenarios(t *testing.T) {
 	})
 
 	t.Run("error if both --from-dir and --image-registry given", func(t *testing.T) {
-		output, err := spawn.Command(daprPath, "init", "--image-registry", "localhost:5000", "--from-dir", "./local-dir")
+		output, err := installDapr(daprPath, daprRuntimeVersion, "--image-registry", "localhost:5000", "--from-dir", "./local-dir")
 		require.Error(t, err, "expected error if both flags are given")
 		require.Contains(t, output, "both --image-registry and --from-dir flags cannot be given at the same time")
 	})
@@ -173,7 +170,7 @@ func TestPrivateRegistry(t *testing.T) {
 		name  string
 		phase func(*testing.T)
 	}{
-		{"test install fails", testInstallWithPrivateRegsitry},
+		{"test install fails", testInstallWithPrivateRegistry},
 	}
 
 	for _, tc := range tests {
@@ -232,17 +229,17 @@ func testUninstall(t *testing.T) {
 
 func testInstall(t *testing.T) {
 	daprPath := getDaprPath()
-	output, err := spawn.Command(daprPath, "init", "--runtime-version", daprRuntimeVersion, "--log-as-json")
+	output, err := installDapr(daprPath, daprRuntimeVersion)
 	t.Log(output)
 	require.NoError(t, err, "init failed")
 
-	// verify all artifacts(conatiners, binaries, configs) after successfull install
+	// verify all artifacts (containers, binaries, configs) after successfull install
 	verifyArtifactsAfterInstall(t)
 }
 
-func testInstallWithPrivateRegsitry(t *testing.T) {
+func testInstallWithPrivateRegistry(t *testing.T) {
 	daprPath := getDaprPath()
-	output, err := spawn.Command(daprPath, "init", "--runtime-version", daprRuntimeVersion, "--image-registry", "smplregistry.io/owner", "--log-as-json")
+	output, err := installDapr(daprPath, daprRuntimeVersion, "--image-registry", "smplregistry.io/owner")
 	t.Log(output)
 	require.Error(t, err, "init failed")
 }
@@ -879,4 +876,22 @@ func listYamlOutputCheck(t *testing.T, output string) {
 	assert.Equal(t, 3555, result["httpPort"], "expected http port to match")
 	assert.Equal(t, 4555, result["grpcPort"], "expected grpc port to match")
 	assert.Equal(t, 0, result["appPort"], "expected app port to match")
+}
+
+// installDapr installs Dapr and returns the output of the command and error.
+// When DAPR_E2E_INIT_SLIM is set, it will install Dapr without Docker containers.
+// This is useful for scenarios where Docker containers are not available, e.g.,
+// in GitHub actions Windows runner.
+// Arguments to the init command can be passed via args.
+// --log-as-json is enabled by default.
+func installDapr(path, runtimeVersion string, args ...string) (string, error) {
+	args = append([]string{"init", "--runtime-version", runtimeVersion, "--log-as-json"}, args...)
+
+	isSlimMode := os.Getenv("DAPR_E2E_INIT_SLIM") == "1"
+	if isSlimMode {
+		args = append(args, "--slim")
+	}
+
+	output, err := spawn.Command(path, args...)
+	return output, err
 }

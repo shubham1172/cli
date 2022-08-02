@@ -45,15 +45,15 @@ jobs:
       DAPR_TGZ: dapr-1.7.0.tgz
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         target_arch: [amd64]
         include:
           - os: ubuntu-latest
             target_os: linux
           - os: macOS-latest
             target_os: darwin
-            #- os: windows-latest
-            #target_os: windows
+          - os: windows-latest
+            target_os: windows
     steps:
       - name: Set up Go ${{ env.GOVER }}
         uses: actions/setup-go@v2
@@ -83,6 +83,10 @@ jobs:
           echo "DAPR_DASHBOARD_VERSION=$DASHBOARD_VERSION" >> $GITHUB_ENV
           echo "Found $DASHBOARD_VERSION"
         shell: bash
+      - name: Set slim mode initialization - Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          echo "DAPR_E2E_INIT_SLIM=1" >> $GITHUB_ENV
       - name: Run E2E tests with GHCR
         # runs every 6hrs
         if: github.event.schedule == '0 */6 * * *'
@@ -92,6 +96,7 @@ jobs:
           export TEST_OUTPUT_FILE=$GITHUB_WORKSPACE/test-e2e-standalone.json
           echo "TEST_OUTPUT_FILE=$TEST_OUTPUT_FILE" >> $GITHUB_ENV
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          export DAPR_E2E_INIT_SLIM=${{ env.DAPR_E2E_INIT_SLIM }}
           make e2e-build-run-sh
         shell: bash
       - name: Run E2E tests with Docker hub
@@ -100,6 +105,7 @@ jobs:
           export TEST_OUTPUT_FILE=$GITHUB_WORKSPACE/test-e2e-standalone.json
           echo "TEST_OUTPUT_FILE=$TEST_OUTPUT_FILE" >> $GITHUB_ENV
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          export DAPR_E2E_INIT_SLIM=${{ env.DAPR_E2E_INIT_SLIM }}
           make e2e-build-run-sh
         shell: bash
       - name: Upload test results
