@@ -25,6 +25,8 @@ type Client interface {
 	Invoke(appID, method string, data []byte, verb string, socket string) (string, error)
 	// Publish is used to publish event to a topic in a pubsub for an app ID.
 	Publish(publishAppID, pubsubName, topic string, payload []byte, socket string, metadata map[string]interface{}) error
+	// Subscribe is used to subscribe to a topic in a pubsub for an app ID.
+	Subscribe(appID, pubsubName, topic, socket string, metadata, routes map[string]interface{}) error
 }
 
 type Standalone struct {
