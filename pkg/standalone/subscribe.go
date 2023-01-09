@@ -23,6 +23,7 @@ import (
 
 const (
 	subscribeHttpRoute = "/dapr/subscribe"
+	eventsHttpRoute    = "/events"
 )
 
 type subscription struct {
@@ -45,25 +46,26 @@ func startSubscribeServer(s subscription) (int, error) {
 		json.NewEncoder(w).Encode([]subscription{s})
 	})
 
+	http.HandleFunc(eventsHttpRoute, func(w http.ResponseWriter, r *http.Request) {
+		var event interface{}
+		json.NewDecoder(r.Body).Decode(&event)
+		fmt.Printf("Received event: %v", event)
+	})
+
 	go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 	return port, nil
 }
 
 // Subscribe to a topic in a pubsub and receive messages.
-func (s *Standalone) Subscribe(appID, pubsubName, topic, socket string, metadata, routes map[string]interface{}) error {
-	strRoutes, err := json.Marshal(routes)
-	if err != nil {
-		return err
-	}
-
+func (s *Standalone) Subscribe(appID, pubsubName, topic, socket string, metadata map[string]interface{}) error {
 	sub := subscription{
 		PubsubName: pubsubName,
 		Topic:      topic,
 		Metadata:   metadata,
-		Route:      string(strRoutes),
+		Route:      eventsHttpRoute,
 	}
 
-	_, err = startSubscribeServer(sub)
+	_, err := startSubscribeServer(sub)
 	if err != nil {
 		return err
 	}

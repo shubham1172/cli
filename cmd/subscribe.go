@@ -29,7 +29,6 @@ var (
 	subscribeTopic    string
 	subscribeMetadata string
 	subscribeSocket   string
-	subscribeRoutes   string
 )
 
 var SubscribeCmd = &cobra.Command{
@@ -65,17 +64,8 @@ dapr subscribe --subscribe-app-id myapp --pubsub target --topic sample --routes 
 			}
 		}
 
-		routes := make(map[string]interface{})
-		if subscribeRoutes != "" {
-			err := json.Unmarshal([]byte(subscribeRoutes), &routes)
-			if err != nil {
-				print.FailureStatusEvent(os.Stderr, "Error parsing routes as JSON. Error: %s", err)
-				os.Exit(1)
-			}
-		}
-
 		client := standalone.NewClient()
-		err := client.Subscribe(subscribeAppID, subscribePubSub, subscribeTopic, subscribeSocket, metadata, routes)
+		err := client.Subscribe(subscribeAppID, subscribePubSub, subscribeTopic, subscribeSocket, metadata)
 		if err != nil {
 			print.FailureStatusEvent(os.Stderr, "Error subscribing to topic %s: %s", subscribeTopic, err)
 			os.Exit(1)
@@ -91,7 +81,6 @@ func init() {
 	SubscribeCmd.Flags().StringVarP(&subscribeTopic, "topic", "t", "", "The topic to subscribe to")
 	SubscribeCmd.Flags().StringVarP(&subscribeSocket, "unix-domain-socket", "u", "", "Path to a unix domain socket dir. If specified, Dapr API servers will use Unix Domain Sockets")
 	SubscribeCmd.Flags().StringVarP(&subscribeMetadata, "metadata", "m", "", "The JSON serialized subscription metadata (optional)")
-	SubscribeCmd.Flags().StringVarP(&subscribeRoutes, "routes", "r", "", "The JSON serialized subscription routes (optional)")
 	SubscribeCmd.Flags().BoolP("help", "h", false, "Print this help message")
 	SubscribeCmd.MarkFlagRequired("subscribe-app-id")
 	SubscribeCmd.MarkFlagRequired("pubsub")
